@@ -73,7 +73,7 @@ public class ChooseAreaFragment extends Fragment {
         listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position,
-                                    long id) {
+            long id) {
                 if (currentLevel == LEVEL_PROVINCE) {
                     selectedProvince = provinceList.get(position);
                     queryCities();
@@ -82,10 +82,17 @@ public class ChooseAreaFragment extends Fragment {
                     queryCounties();
                 } else if (currentLevel == LEVEL_COUNTY) {
                     String weatherId = countyList.get(position).getWeatherId();
-                    Intent intent = new Intent(getActivity(), WeatherActivity.class);
-                    intent.putExtra("weather_id", weatherId);
-                    startActivity(intent);
-                    getActivity().finish();
+                    if (getActivity() instanceof MainActivity) {
+                        Intent intent = new Intent(getActivity(), WeatherActivity.class);
+                        intent.putExtra("weather_id", weatherId);
+                        startActivity(intent);
+                        getActivity().finish();
+                    } else if (getActivity() instanceof WeatherActivity) {
+                        WeatherActivity activity = (WeatherActivity) getActivity();
+                        activity.drawerLayout.closeDrawers();
+                        activity.swipeRefresh.setRefreshing(true);
+                        activity.requestWeather(weatherId);
+                    }
                 }
             }
         });
@@ -128,7 +135,7 @@ private void queryCities() {
     titleText.setText(selectedProvince.getProvinceName());
     backButton.setVisibility(View.VISIBLE);
     cityList = DataSupport.where("provinceId = ?",String.valueOf(
-            selectedProvince.getProvinceCode())).find(City.class);
+            selectedProvince.getId())).find(City.class);
     if(cityList.size() > 0) {
         dataList.clear();
         for (City city : cityList) {
@@ -150,7 +157,7 @@ private void queryCounties() {
     titleText.setText(selectedCity.getCityName());
     backButton.setVisibility(View.VISIBLE);
     countyList = DataSupport.where("cityId = ?", String.valueOf(selectedCity.
-    getCityCode())).find(County.class);
+    getId())).find(County.class);
     if (countyList.size() > 0) {
         dataList.clear();
         for (County county : countyList) {
@@ -190,9 +197,9 @@ private void queryFromServer(String address, final String type) {
             if ("province".equals(type)) {
                 result = Utility.handleProvinceResponse(responseText);
             } else if ("city".equals(type)) {
-                result = Utility.handleCityResponse(responseText, selectedProvince.getProvinceCode());
+                result = Utility.handleCityResponse(responseText, selectedProvince.getId());
             } else if ("county".equals(type)) {
-                result = Utility.handleCountyResponse(responseText, selectedCity.getCityCode());
+                result = Utility.handleCountyResponse(responseText, selectedCity.getId());
             }
             if (result) {
                 getActivity().runOnUiThread(new Runnable() {
